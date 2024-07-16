@@ -1,0 +1,6 @@
+azure-storage-file-datalake
+azure-ai-documentintelligence==1.0.0b2
+langchain
+openai
+tiktoken
+requests
