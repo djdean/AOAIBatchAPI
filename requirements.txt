@@ -4,3 +4,4 @@ langchain
 openai
 tiktoken
 requests
+token-count

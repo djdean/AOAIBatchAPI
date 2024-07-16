@@ -1,8 +1,8 @@
 
-import os
 from openai import AzureOpenAI
 import requests
-import json
+import time
+import datetime
 
 class AOAIHandler:
     def __init__(self, config):
@@ -72,3 +72,30 @@ class AOAIHandler:
         batch_id = batch_response.id
         self.batch_status[batch_id] = "Submitted"
         return batch_id
+    def wait_for_file_upload(self, file_id):
+        status = "pending"
+        while status != "processed" or status != "error":
+            time.sleep(15)
+            file_response = self.aoai_client.files.retrieve(file_id)
+            status = file_response.status
+            print(f"{datetime.now()} File Id: {file_id}, Status: {status}")
+        if status == "error":
+            print(f"Error occurred while processing file {file_id}")
+        else:
+            print(f"File {file_id} processed successfully.")
+        return status
+    def wait_for_batch_job(self, batch_id):
+        # Wait until the uploaded file is in processed state
+        status = "Validating"
+        while status not in ("Completed", "Failed", "Canceled"):
+            time.sleep(60)
+            batch_response = self.aoai_client.batches.retrieve(batch_id)
+            status = batch_response.status
+            print(f"{datetime.now()} Batch Id: {batch_id},  Status: {status}")
+        if status == "Failed":
+            print(f"Batch job {batch_id} failed.")
+        elif status == "Canceled":
+            print(f"Batch job {batch_id} was canceled.")
+        else:
+            print(f"Batch job {batch_id} completed successfully.")
+        return status

@@ -40,6 +40,18 @@ class StorageHandler:
         file_client = directory_client.get_file_client(file_name)
         download = file_client.download_file()
         return download.readall()
+    def save_file_to_local(self, file_name, directory_client, local_path):
+        file_download_status = True
+        file_client = directory_client.get_file_client(file_name)
+        download = file_client.download_file()
+        try:
+            with open(local_path, "wb") as file:
+                file.write(download.readall())
+            print(f"File {file_name} saved to local path {local_path}")
+        except Exception as e:
+            print(f"An error occurred while saving file {file_name} to local path {local_path}: {e}")
+            file_download_status = True
+        return file_download_status
 
     def get_file_system_client(self, file_system_name: str) -> FileSystemClient:
         file_system_client = self.service_client.get_file_system_client(file_system_name)
