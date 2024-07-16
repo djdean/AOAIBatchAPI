@@ -3,6 +3,7 @@ from azure.storage.filedatalake import (
     DataLakeDirectoryClient,
     FileSystemClient
 )
+import os
 class StorageHandler:
     def __init__(self, storage_account_name, storage_account_key, file_system_name=None):
         self.storage_account_name = storage_account_name
@@ -36,6 +37,17 @@ class StorageHandler:
         directory_client = self.file_system_client.create_directory(directory_name)
         return directory_client
     
+    def get_directory_client(self, directory_name: str) -> DataLakeDirectoryClient:
+        directory_client = self.file_system_client.get_directory_client(directory_name)
+        return directory_client
+    
+    def get_file_list(self, path: str) -> list:
+        file_list = [] 
+        paths = self.file_system_client.get_paths(path=path)
+        for path in paths:
+            if not path.is_directory:
+                file_list.append(path.name)
+        return file_list
     def get_file_data(self, file_name,directory_client):
         file_client = directory_client.get_file_client(file_name)
         download = file_client.download_file()
@@ -44,8 +56,9 @@ class StorageHandler:
         file_download_status = True
         file_client = directory_client.get_file_client(file_name)
         download = file_client.download_file()
+        output_path = os.path.join(local_path, file_name)
         try:
-            with open(local_path, "wb") as file:
+            with open(output_path, "wb") as file:
                 file.write(download.readall())
             print(f"File {file_name} saved to local path {local_path}")
         except Exception as e:

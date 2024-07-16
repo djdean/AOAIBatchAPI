@@ -14,7 +14,7 @@ class AOAIHandler:
         self.batch_status = {}
     def init_client(self,config):
         client = AzureOpenAI(
-            aoai_endpoint = config['aoai_endpoint'], 
+            azure_endpoint = config['aoai_endpoint'], 
             api_key=config['aoai_key'],  
             api_version=config['aoai_api_version']
         )
