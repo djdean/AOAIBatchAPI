@@ -5,18 +5,32 @@ import time
 import datetime
 
 class AOAIHandler:
-    def __init__(self, config):
+    def __init__(self, config, batch=False):
         self.config_data = config
         self.model = config["aoai_deployment_name"]
         self.batch_endpoint = config["batch_job_endpoint"]
         self.completion_window = config["completion_window"]
-        self.aoai_client = self.init_client(config)
+        if batch:
+            self.aoai_client = self.init_batch_client(config)
+        else:
+            self.aoai_client = self.init_client(config)
         self.batch_status = {}
+        self.azure_endpoint = config['aoai_endpoint']
+        self.api_version = config['aoai_api_version']
+        self.api_key = config["aoai_key"]
     def init_client(self,config):
         client = AzureOpenAI(
             azure_endpoint = config['aoai_endpoint'], 
             api_key=config['aoai_key'],  
             api_version=config['aoai_api_version']
+        )
+        return client
+    def init_batch_client(self,config):
+        client = AzureOpenAI(
+            azure_endpoint = config['aoai_endpoint'], 
+            api_key=config['aoai_key'],  
+            api_version=config['aoai_api_version'],
+            azure_deployment = config['aoai_deployment_name']
         )
         return client
     def upload_batch_input_file(self,input_file_name, input_file_path):
@@ -71,19 +85,22 @@ class AOAIHandler:
         # Save batch ID for later use
         batch_id = batch_response.id
         self.batch_status[batch_id] = "Submitted"
-        return batch_id
+        return batch_response
     def wait_for_file_upload(self, file_id):
         status = "pending"
-        while status != "processed" or status != "error":
-            time.sleep(15)
+        while True:
+            time.sleep(5)
             file_response = self.aoai_client.files.retrieve(file_id)
             status = file_response.status
-            print(f"{datetime.now()} File Id: {file_id}, Status: {status}")
-        if status == "error":
-            print(f"Error occurred while processing file {file_id}")
-        else:
-            print(f"File {file_id} processed successfully.")
-        return status
+            if status == "error":
+                print(f"{datetime.datetime.now()} Error occurred while processing file {file_id}")
+                break
+            elif status == "processed":
+                print(f"{datetime.datetime.now()} File {file_id} processed successfully.")
+                break
+            else:
+                print(f"{datetime.datetime.now()} File Id: {file_id}, Status: {status}")
+        return file_response
     def wait_for_batch_job(self, batch_id):
         # Wait until the uploaded file is in processed state
         status = "Validating"
@@ -91,11 +108,11 @@ class AOAIHandler:
             time.sleep(60)
             batch_response = self.aoai_client.batches.retrieve(batch_id)
             status = batch_response.status
-            print(f"{datetime.now()} Batch Id: {batch_id},  Status: {status}")
+            print(f"{datetime.datetime.now()} Batch Id: {batch_id},  Status: {status}")
         if status == "Failed":
             print(f"Batch job {batch_id} failed.")
         elif status == "Canceled":
             print(f"Batch job {batch_id} was canceled.")
         else:
             print(f"Batch job {batch_id} completed successfully.")
-        return status
+        return batch_response

@@ -2,9 +2,11 @@ import json
 import tiktoken
 import os
 from token_count import TokenCount
+import datetime
 class Utils:
     def __init__(self):
         pass
+    
     def get_file_name_only(self, file_name):
         file_name_split = file_name.split("/")
         file_name_with_extension = file_name_split[len(file_name_split)-1]
@@ -25,8 +27,12 @@ class Utils:
         encoding = tiktoken.encoding_for_model(encoding_name)
         num_tokens = len(encoding.encode(string))
         return num_tokens
-    def get_tokens_in_file(self, file, model_family):
+    @staticmethod
+    def get_tokens_in_file(file, model_family):
         tc = TokenCount(model_name=model_family)
         tokens = tc.num_tokens_from_file(file)
         return tokens
+    @staticmethod
+    def append_postfix(file):
+        return f"{file}_{datetime.datetime.now()}"
 
