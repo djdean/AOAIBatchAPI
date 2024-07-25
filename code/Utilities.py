@@ -23,7 +23,8 @@ class Utils:
         for file in os.listdir(directory):
             file_list.append(file)
         return file_list
-    def num_tokens_from_string(self, string: str, encoding_name: str) -> int:
+    @staticmethod
+    def num_tokens_from_string(string: str, encoding_name: str) -> int:
         encoding = tiktoken.encoding_for_model(encoding_name)
         num_tokens = len(encoding.encode(string))
         return num_tokens
@@ -35,4 +36,15 @@ class Utils:
     @staticmethod
     def append_postfix(file):
         return f"{file}_{datetime.datetime.now()}"
+    @staticmethod
+    def convert_to_json_from_binary_string(data):
+        # Remove the leading "b'" and trailing "'"
+        data_str = data[2:-1]
+
+        # Replace escape sequences
+        data_str_clean = data_str.replace('\\n', '').replace('\\"', '"').replace('\\\\', '\\')
+
+        # Convert the JSON string to a dictionary
+        data_dict = json.loads(data_str_clean)
+        return data_dict
 
