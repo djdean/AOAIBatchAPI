@@ -23,9 +23,10 @@ The `Storage Blob Data Contributer` role must be given to the AOAI service's Man
 <h1>Configuration:</h1>
 There are three configuration files required to use this runner:
 
-1. AOAI_config.json - This file contains the settings for AOAI.
-2. storage_config.json - This file contains the settings for the Azure Data Lake Storage Account which will hold the input/output of the job.
-3. app_config.json - This file contains the application configuration settings.
+1. `AOAI_config.json` - This file contains the settings for AOAI.
+2. `storage_config.json` - This file contains the settings for the Azure Data Lake Storage Account which will hold the input/output of the job.
+3. `app_config.json` - This file contains the application configuration settings.
+4. `APP_CONFIG` in `runBatch.py` - This variable should be set to point to the `app_config.json` file which defines the app settings. This will support command line parameter-based input in the future.
 
 Reference templates of these files have been provided in the `templates` directory where <> denote settings that must be filled in. 
 Other important settings are:
@@ -36,7 +37,7 @@ Other important settings are:
 based on the requirements/file sizes being sent to the batch service.
 4. download_to_local - This controls if the files should be downloaded to local to count the number of tokens in a file. Currently this should be set to the default value of `false` but may be used in future versions.
 5. input_root_directory - This is the directory the runner will check for input files. The default setting of `/` assumes no directories in the input filesystem/container. The current implementation is not recursive; if input files are stored in a directory in the input filesystem/container then it should be specified here.
-6. continuous_mode - This setting controls how the runner is run. If set to `true`, it will continuously check the input directory for files every 60 seconds, taking a snapshot of the files and kicking off a series of batch jobs to process until all files are processed. If set to `false` it will only run when executed.
+6. continuous_mode - This setting controls how the runner is run. If set to `true`, it will continuously check the input directory for files every 60 seconds, taking a snapshot of the files and kicking off a series of batch jobs to process until all files are processed. To stop, press `ctrl+c`. If set to `false` it will only run when executed. 
 
 <h1>Using the runner</h1>
 
