@@ -2,10 +2,17 @@ from Utilities import Utils
 from AzureStorageHandler import StorageHandler
 from AOAIHandler import AOAIHandler
 from AzureBatch import AzureBatch
+import time
 import asyncio
+import signal
+import sys
 
+def signal_handler(sig, frame):
+    print('Exiting...')
+    sys.exit(0)
 
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
     APP_CONFIG = r"C:\Users\dade\Desktop\BatchAPI\config\app_config.json"
     utils = Utils()
     app_config_data = utils.read_json_data(APP_CONFIG)
@@ -29,18 +36,28 @@ def main():
     local_download_path = None
     if download_to_local:
         local_download_path = app_config_data["local_download_path"]
+    continuous_mode = app_config_data["continuous_mode"]
     azure_batch = AzureBatch(aoai_client, input_storage_handler, 
                              error_storage_handler, processed_storage_handler, BATCH_PATH, directory_client, 
                              local_download_path)
-    azure_batch.aoai_client.delete_all_files()
-    asyncio.run(azure_batch.process_all_files(files, batch_size))   
-    #Cleanup
-    azure_batch.aoai_client.delete_all_files()
+    if continuous_mode:
+        print("Running in continuous mode")
+        while True:
+            if len(files) > 0:
+                asyncio.run(azure_batch.process_all_files(files, batch_size))
+                azure_batch.aoai_client.delete_all_files()
+            else:
+                print("No files found. Sleeping for 60 seconds")
+                time.sleep(60) 
+            files = input_storage_handler.get_file_list(input_root_directory)
+    else:
+        print("Running in on-demand mode")
+        asyncio.run(azure_batch.process_all_files(files, batch_size))   
+        #Cleanup
+        azure_batch.aoai_client.delete_all_files()
 
     #TODO: 1) Support blob storage
-    #      2) Remove BATCH_PATH parameter - DONE
-    #      3) Add in memory processing option - Done
-    #      4) Make local vs download configurable - DONE       
+     
 
 
           

@@ -3,5 +3,6 @@
     "storage_config": "<Local path to storage_config.json>",
     "local_download_path": "<Local path for file downloads if enabled>",
     "batch_size":10,
-    "download_to_local":false
+    "download_to_local":false,
+    "continuous_mode":true
 }
