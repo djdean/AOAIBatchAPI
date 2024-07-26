@@ -31,6 +31,7 @@ class AzureBatch:
         
     async def process_file(self,file):
         print(f"Processing file {file}")
+        filename_only = Utils.get_file_name_only(file)
         #Mark start time
         processing_result = {}
         batch_storage_path = self.batch_path + file
@@ -63,15 +64,16 @@ class AzureBatch:
             "output_file_id": finished_batch_response.output_file_id,
             "token_size": token_size
         }
-        metadata_filename = f"{file}_metadata.json"  
+        metadata_filename = f"{filename_only}_metadata.json"  
         error_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.error_file_id)
-        error_file_content_string = str(error_file_content.content)
+        error_file_content_string = str(error_file_content.text)
         output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)  
-        output_file_content_string = str(output_file_content.content)
+        output_file_content_string = str(output_file_content.text)
+        test = Utils.clean_binary_string(output_file_content_string)
         output_directory_name = Utils.append_postfix(file)
-        if error_file_content_string == "":
+        if not error_file_content_string == "":
         #if True:
-            error_filename = f"{file}_error.json"
+            error_filename = f"{filename_only}_error.json"
             batch_metadata["error_file_name"] = error_filename
             error_file_content_json = json.dumps(error_file_content_string)
             error_file_metadata = json.dumps(batch_metadata)
@@ -90,15 +92,15 @@ class AzureBatch:
                 processing_result["status"] = False
                 processing_result["details"] = False
         #Same as above, will work with 7-1-2024-preview API when released on the 29th of July.
-        if output_file_content_string == "":
-            output_filename = f"{file}_output.json"
+        if not output_file_content_string == "":
+            output_filename = f"{filename_only}_output.json"
             batch_metadata["output_file_name"] = output_filename
             output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)   
             output_file_content_json = json.dumps(output_file_content_string)
             output_file_metadata = json.dumps(batch_metadata)
             output_content_write_result = self.processed_storage_handler.write_content_to_directory(output_file_content_json,output_directory_name,output_filename)
             output_metadata_write_result = self.processed_storage_handler.write_content_to_directory(output_file_metadata,output_directory_name,metadata_filename)
-            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file)
+            file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file)
             if output_content_write_result and output_metadata_write_result:
                 print(f"File: {file} has been processed successfully. Results are available in the 'processed' directory.")
                 processing_result["error"] = False

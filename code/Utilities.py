@@ -6,8 +6,8 @@ import datetime
 class Utils:
     def __init__(self):
         pass
-    
-    def get_file_name_only(self, file_name):
+    @staticmethod
+    def get_file_name_only(file_name):
         file_name_split = file_name.split("/")
         file_name_with_extension = file_name_split[len(file_name_split)-1]
         file_name_with_extension_split = file_name_with_extension.split(".")
@@ -36,6 +36,9 @@ class Utils:
     @staticmethod
     def append_postfix(file):
         return f"{file}_{datetime.datetime.now()}"
+    @staticmethod
+    def clean_binary_string(data):
+        return data[2:-1].replace('\\n', '').replace('\\"', '"').replace('\\\\', '\\')
     @staticmethod
     def convert_to_json_from_binary_string(data):
         # Remove the leading "b'" and trailing "'"
