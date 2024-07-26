@@ -23,7 +23,7 @@ The `Storage Blob Data Contributer` role must be given to the AOAI service's Man
 <h1>Configuration:</h1>
 There are three configuration files required to use this runner:
 
-1. AOAI_config.json - This file contains the settings for Azure Open AI.
+1. AOAI_config.json - This file contains the settings for AOAI.
 2. storage_config.json - This file contains the settings for the Azure Data Lake Storage Account which will hold the input/output of the job.
 3. app_config.json - This file contains the application configuration settings.
 
