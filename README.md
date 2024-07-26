@@ -23,9 +23,10 @@ The `Storage Blob Data Contributer` role must be given to the AOAI service's Man
 <h1>Configuration:</h1>
 There are three configuration files required to use this runner:
 
-1. AOAI_config.json - This file contains the settings for AOAI.
-2. storage_config.json - This file contains the settings for the Azure Data Lake Storage Account which will hold the input/output of the job.
-3. app_config.json - This file contains the application configuration settings.
+1. `AOAI_config.json` - This file contains the settings for AOAI.
+2. `storage_config.json` - This file contains the settings for the Azure Data Lake Storage Account which will hold the input/output of the job.
+3. `app_config.json` - This file contains the application configuration settings.
+4. `APP_CONFIG` in `runBatch.py` - This variable should be set to point to the `app_config.json` file which defines the app settings. This will support command line parameter-based input in the future.
 
 Reference templates of these files have been provided in the `templates` directory where <> denote settings that must be filled in. 
 Other important settings are:
