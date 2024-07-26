@@ -1,5 +1,5 @@
 <h1>Azure Open AI Batch Runner</h1>
-<h2>Disclamer:</h2>This is a reference implementation of the Azure Open AI Batch API designed to be extended for different use cases.<br/>
+<h2>Disclaimer:</h2>This is a reference implementation of the Azure Open AI Batch API designed to be extended for different use cases.<br/>
  This code is <b>NOT</b> intended for production use but instead as a starting point/reference implenentation of the Azure Open AI (AOAI) Batch API. The code here is provided <b>AS IS</b>, you assume all responsibility (e.g., charges) from running this code. Testing in your environment should be done before running large use cases. Lastly, this is a work in progress and will be updated frequently. Please check back regularly for updates. 
 <h1>Installation & Setup</h1>
 <i>Environment:</i><br/><br/>
