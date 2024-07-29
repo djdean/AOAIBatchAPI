@@ -96,7 +96,7 @@ class AzureBatch:
             output_filename = f"{filename_only}_output.json"
             batch_metadata["output_file_name"] = output_filename
             output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)   
-            output_file_content_json = json.dumps(output_file_content_string)
+            output_file_content_json = output_file_content_string
             output_file_metadata = json.dumps(batch_metadata)
             output_content_write_result = self.processed_storage_handler.write_content_to_directory(output_file_content_json,output_directory_name,output_filename)
             output_metadata_write_result = self.processed_storage_handler.write_content_to_directory(output_file_metadata,output_directory_name,metadata_filename)
