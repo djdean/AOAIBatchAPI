@@ -22,7 +22,8 @@ def main():
     input_filesystem_system_name =  storage_config_data["input_filesystem_system_name"]
     error_filesystem_system_name = storage_config_data["error_filesystem_system_name"]
     processed_filesystem_system_name = storage_config_data["processed_filesystem_system_name"]
-    input_root_directory = storage_config_data["input_root_directory"]
+    input_directory = storage_config_data["input_directory"]
+    output_directory = storage_config_data["output_directory"]
     aoai_config_data = utils.read_json_data(app_config_data["AOAI_config"])
     BATCH_PATH = "https://"+storage_account_name+".blob.core.windows.net/"+input_filesystem_system_name+"/"
     batch_size = int(app_config_data["batch_size"])
@@ -30,16 +31,16 @@ def main():
     input_storage_handler = StorageHandler(storage_account_name, storage_account_key, input_filesystem_system_name)
     error_storage_handler = StorageHandler(storage_account_name, storage_account_key, error_filesystem_system_name)
     processed_storage_handler = StorageHandler(storage_account_name, storage_account_key, processed_filesystem_system_name)
-    files = input_storage_handler.get_file_list(input_root_directory)
-    directory_client = input_storage_handler.get_directory_client(input_root_directory)
+    files = input_storage_handler.get_file_list(input_directory)
+    input_directory_client = input_storage_handler.get_directory_client(input_directory)
     download_to_local = app_config_data["download_to_local"]
     local_download_path = None
     if download_to_local:
         local_download_path = app_config_data["local_download_path"]
     continuous_mode = app_config_data["continuous_mode"]
     azure_batch = AzureBatch(aoai_client, input_storage_handler, 
-                             error_storage_handler, processed_storage_handler, BATCH_PATH, directory_client, 
-                             local_download_path)
+                             error_storage_handler, processed_storage_handler, BATCH_PATH, input_directory_client, 
+                             local_download_path,output_directory)
     if continuous_mode:
         print("Running in continuous mode")
         while True:
@@ -49,7 +50,7 @@ def main():
             else:
                 print("No files found. Sleeping for 60 seconds")
                 time.sleep(60) 
-            files = input_storage_handler.get_file_list(input_root_directory)
+            files = input_storage_handler.get_file_list(input_directory)
     else:
         print("Running in on-demand mode")
         asyncio.run(azure_batch.process_all_files(files, batch_size))   

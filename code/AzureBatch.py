@@ -6,7 +6,7 @@ import time
 class AzureBatch:
     def __init__(self, aoai_client, input_storage_handler, 
                  error_storage_handler, processed_storage_handler, batch_path,
-                input_directory_client, local_download_path):
+                input_directory_client, local_download_path, output_directory):
         self.aoai_client = aoai_client
         self.input_storage_handler = input_storage_handler
         self.error_storage_handler = error_storage_handler
@@ -14,6 +14,7 @@ class AzureBatch:
         self.batch_path = batch_path
         self.input_directory_client = input_directory_client
         self.local_download_path = local_download_path
+        self.output_directory = output_directory
 
     async def process_all_files(self,files,micro_batch_size):
         tasks = []
@@ -71,7 +72,7 @@ class AzureBatch:
         output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)  
         output_file_content_string = str(output_file_content.text)
         test = Utils.clean_binary_string(output_file_content_string)
-        output_directory_name = Utils.append_postfix(file)
+        output_directory_name = self.output_directory+"/"+Utils.append_postfix(file)
         if not error_file_content_string == "":
         #if True:
             error_filename = f"{filename_only}_error.json"
@@ -84,14 +85,8 @@ class AzureBatch:
             #TODO: Write original file to error directory
             if error_content_write_result and error_metadata_write_result:
                 print(f"An error file with details written to the 'error' directory.")
-                processing_result["error"] = True
-                processing_result["status"] = False
-                processing_result["details"] = True
             else:
                 print(f"There was a problem processing file: {file} and details could not be written to storage. Please check {initial_batch_response.id} for more details.")
-                processing_result["error"] = True
-                processing_result["status"] = False
-                processing_result["details"] = False
         #Same as above, will work with 7-1-2024-preview API when released on the 29th of July.
         if not output_file_content_string == "":
             output_filename = f"{filename_only}_output.json"
@@ -104,14 +99,8 @@ class AzureBatch:
             file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file_without_directory)
             if output_content_write_result and output_metadata_write_result:
                 print(f"File: {file} has been processed successfully. Results are available in the 'processed' directory.")
-                processing_result["error"] = False
-                processing_result["status"] = True
-                processing_result["details"] = True
             else:
                 print(f"File: {file} has been processed successfully but could not be written to storage. Please check {initial_batch_response.id} for more details.")   
-                processing_result["error"] = False
-                processing_result["status"] = True
-                processing_result["details"] = True
         cleanup_status = self.cleanup_batch(file_without_directory,file_id)
         processing_result["cleanup_status"] = cleanup_status
         return processing_result
