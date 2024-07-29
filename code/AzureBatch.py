@@ -32,6 +32,7 @@ class AzureBatch:
     async def process_file(self,file):
         print(f"Processing file {file}")
         filename_only = Utils.get_file_name_only(file)
+        file_without_directory = Utils.strip_directory_name(file)
         #Mark start time
         processing_result = {}
         batch_storage_path = self.batch_path + file
@@ -41,7 +42,7 @@ class AzureBatch:
                                         self.input_directory_client, output_path)
             token_size = Utils.get_tokens_in_file(output_path,"gpt-4")
         else:
-            batch_file_data = self.input_storage_handler.get_file_data(file,self.input_directory_client)
+            batch_file_data = self.input_storage_handler.get_file_data(file_without_directory,self.input_directory_client)
             batch_file_string = str(batch_file_data)
             token_size = Utils.num_tokens_from_string(batch_file_string,"gpt-4")
         print(f"File {file} has {token_size} tokens")
@@ -100,7 +101,7 @@ class AzureBatch:
             output_file_metadata = json.dumps(batch_metadata)
             output_content_write_result = self.processed_storage_handler.write_content_to_directory(output_file_content_json,output_directory_name,output_filename)
             output_metadata_write_result = self.processed_storage_handler.write_content_to_directory(output_file_metadata,output_directory_name,metadata_filename)
-            file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file)
+            file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file_without_directory)
             if output_content_write_result and output_metadata_write_result:
                 print(f"File: {file} has been processed successfully. Results are available in the 'processed' directory.")
                 processing_result["error"] = False
@@ -111,7 +112,7 @@ class AzureBatch:
                 processing_result["error"] = False
                 processing_result["status"] = True
                 processing_result["details"] = True
-        cleanup_status = self.cleanup_batch(file,file_id)
+        cleanup_status = self.cleanup_batch(file_without_directory,file_id)
         processing_result["cleanup_status"] = cleanup_status
         return processing_result
     def cleanup_batch(self,filename,file_id):
