@@ -4,8 +4,8 @@
     "input_filesystem_system_name": "<Input Filesystem/Container System Name>",
     "processed_filesystem_system_name": "<Processed Filesystem/Container System Name>",
     "error_filesystem_system_name": "<Error Filesystem/Container System Name>",
-    "input_directory": "<Input Directory Name>",
-    "output_directory": "<Content Output Directory Name>",
-    "error_directory": "<Error Directory Name>"
+    "input_directory": "/",
+    "output_directory": "/",
+    "error_directory": "/"
     
 }
