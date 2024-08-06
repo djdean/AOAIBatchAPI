@@ -53,4 +53,13 @@ class Utils:
         # Convert the JSON string to a dictionary
         data_dict = json.loads(data_str_clean)
         return data_dict
+    @staticmethod
+    def get_file_extension(file_name):
+        file_name_split = file_name.split(".")
+        #No extension
+        extension = file_name
+        if len(file_name_split) > 1:
+            extension = file_name_split[len(file_name_split)-1]
+        return extension
+        
 

@@ -24,6 +24,7 @@ def main():
     processed_filesystem_system_name = storage_config_data["processed_filesystem_system_name"]
     input_directory = storage_config_data["input_directory"]
     output_directory = storage_config_data["output_directory"]
+    error_directory = storage_config_data["error_directory"]
     aoai_config_data = utils.read_json_data(app_config_data["AOAI_config"])
     BATCH_PATH = "https://"+storage_account_name+".blob.core.windows.net/"+input_filesystem_system_name+"/"
     batch_size = int(app_config_data["batch_size"])
@@ -40,7 +41,7 @@ def main():
     continuous_mode = app_config_data["continuous_mode"]
     azure_batch = AzureBatch(aoai_client, input_storage_handler, 
                              error_storage_handler, processed_storage_handler, BATCH_PATH, input_directory_client, 
-                             local_download_path,output_directory)
+                             local_download_path,output_directory, error_directory)
     if continuous_mode:
         print("Running in continuous mode")
         while True:

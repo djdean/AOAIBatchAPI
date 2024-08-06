@@ -93,15 +93,15 @@ class AOAIHandler:
         return file_response
     async def wait_for_batch_job(self, batch_id):
         # Wait until the uploaded file is in processed state
-        status = "Validating"
+        status = "validating"
         while status not in ("completed", "failed", "canceled"):
             batch_response = self.aoai_client.batches.retrieve(batch_id)
             status = batch_response.status
             print(f"{datetime.datetime.now()} Batch Id: {batch_id},  Status: {status}")
             await asyncio.sleep(10)
-        if status == "Failed":
+        if status == "failed":
             print(f"Batch job {batch_id} failed.")
-        elif status == "Canceled":
+        elif status == "canceled":
             print(f"Batch job {batch_id} was canceled.")
         else:
             print(f"Batch job {batch_id} completed successfully.")

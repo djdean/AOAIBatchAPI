@@ -6,7 +6,7 @@ import time
 class AzureBatch:
     def __init__(self, aoai_client, input_storage_handler, 
                  error_storage_handler, processed_storage_handler, batch_path,
-                input_directory_client, local_download_path, output_directory):
+                input_directory_client, local_download_path, output_directory, error_directory):
         self.aoai_client = aoai_client
         self.input_storage_handler = input_storage_handler
         self.error_storage_handler = error_storage_handler
@@ -15,6 +15,7 @@ class AzureBatch:
         self.input_directory_client = input_directory_client
         self.local_download_path = local_download_path
         self.output_directory = output_directory
+        self.error_directory = error_directory
 
     async def process_all_files(self,files,micro_batch_size):
         tasks = []
@@ -34,6 +35,7 @@ class AzureBatch:
         print(f"Processing file {file}")
         filename_only = Utils.get_file_name_only(file)
         file_without_directory = Utils.strip_directory_name(file)
+        file_extension = Utils.get_file_extension(file_without_directory)
         #Mark start time
         processing_result = {}
         batch_storage_path = self.batch_path + file
@@ -46,10 +48,17 @@ class AzureBatch:
             batch_file_data = self.input_storage_handler.get_file_data(file_without_directory,self.input_directory_client)
             batch_file_string = str(batch_file_data)
             token_size = Utils.num_tokens_from_string(batch_file_string,"gpt-4")
+        output_directory_name = self.output_directory+"/"+Utils.append_postfix(file_without_directory)
+        error_directory_name = self.error_directory+"/"+Utils.append_postfix(file_without_directory)
         print(f"File {file} has {token_size} tokens")
         # Process the file
-        file_status = self.aoai_client.upload_batch_input_file(file,batch_storage_path)
-        file_content_json = file_status.json()
+        upload_response = self.aoai_client.upload_batch_input_file(file,batch_storage_path)
+        if not upload_response:
+            print(f"An error occurred while uploading file {file}. Please check the file and try again. Code: {upload_response.status_code}")
+            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_without_directory)
+            cleanup_status = self.cleanup_batch(file_without_directory,"")
+            return
+        file_content_json = upload_response.json()
         file_id = file_content_json['id']
         print(f"file_id: {file_content_json['id']}")
         #TODO: Check if the file was uploaded successfully, if not, move to error folder and cleanup
@@ -57,7 +66,6 @@ class AzureBatch:
         initial_batch_response = self.aoai_client.create_batch_job(file_id)
         #This takes start time as a param
         (finished_batch_response) = await self.aoai_client.wait_for_batch_job(initial_batch_response.id)
-        print(f"Batch job {initial_batch_response.id} completed.")
         batch_metadata = {
             "file_name": file,
             "input_file_id": finished_batch_response.input_file_id,
@@ -66,30 +74,37 @@ class AzureBatch:
             "output_file_id": finished_batch_response.output_file_id,
             "token_size": token_size
         }
-        metadata_filename = f"{filename_only}_metadata.json"  
-        error_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.error_file_id)
-        error_file_content_string = str(error_file_content.text)
-        output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)  
-        output_file_content_string = str(output_file_content.text)
-        test = Utils.clean_binary_string(output_file_content_string)
-        output_directory_name = self.output_directory+"/"+Utils.append_postfix(file)
+        metadata_filename = f"{filename_only}_metadata."+file_extension
+        if finished_batch_response.error_file_id is not None:
+            error_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.error_file_id)
+            error_file_content_string = str(error_file_content.text)
+        else:
+            errors = finished_batch_response.errors.data
+            error_file_content = {}
+            error_index = 1
+            for error in errors:
+                error_file_content["Error "+str(error_index)] = error.message
+            error_file_content_string = json.dumps(error_file_content)
+        if finished_batch_response.output_file_id is not None:
+            output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)  
+            output_file_content_string = str(output_file_content.text)
+        else:
+            output_file_content = ""
+            output_file_content_string = "" 
         if not error_file_content_string == "":
-        #if True:
-            error_filename = f"{filename_only}_error.json"
+            error_filename = f"{filename_only}_error."+file_extension
             batch_metadata["error_file_name"] = error_filename
             error_file_content_json = json.dumps(error_file_content_string)
             error_file_metadata = json.dumps(batch_metadata)
             error_content_write_result = self.error_storage_handler.write_content_to_directory(error_file_content_json,output_directory_name,error_filename)
             error_metadata_write_result = self.error_storage_handler.write_content_to_directory(error_file_metadata,output_directory_name,metadata_filename)
             file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file)
-            #TODO: Write original file to error directory
             if error_content_write_result and error_metadata_write_result:
                 print(f"An error file with details written to the 'error' directory.")
             else:
                 print(f"There was a problem processing file: {file} and details could not be written to storage. Please check {initial_batch_response.id} for more details.")
-        #Same as above, will work with 7-1-2024-preview API when released on the 29th of July.
         if not output_file_content_string == "":
-            output_filename = f"{filename_only}_output.json"
+            output_filename = f"{filename_only}_output."+file_extension
             batch_metadata["output_file_name"] = output_filename
             output_file_content = self.aoai_client.aoai_client.files.content(finished_batch_response.output_file_id)   
             output_file_content_json = output_file_content_string
