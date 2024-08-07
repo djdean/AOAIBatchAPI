@@ -6,6 +6,7 @@ import time
 import asyncio
 import signal
 import sys
+import os
 
 def signal_handler(sig, frame):
     print('Exiting...')
@@ -13,7 +14,7 @@ def signal_handler(sig, frame):
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
-    APP_CONFIG = r"C:\Users\dade\Desktop\BatchAPI\config\app_config.json"
+    APP_CONFIG = os.environ.get('APP_CONFIG', r"C:\Users\dade\Desktop\BatchAPI\config\app_config.json")
     utils = Utils()
     app_config_data = utils.read_json_data(APP_CONFIG)
     storage_config_data = utils.read_json_data(app_config_data["storage_config"])

@@ -2,7 +2,7 @@ import json
 import tiktoken
 import os
 from token_count import TokenCount
-import datetime
+from  datetime import datetime
 class Utils:
     def __init__(self):
         pass
@@ -38,7 +38,8 @@ class Utils:
         return tokens
     @staticmethod
     def append_postfix(file):
-        return f"{file}_{datetime.datetime.now()}"
+        datetime_string = datetime.today().strftime('%Y-%m-%d_%H_%M_%S')
+        return f"{file}_{datetime_string}"
     @staticmethod
     def clean_binary_string(data):
         return data[2:-1].replace('\\n', '').replace('\\"', '"').replace('\\\\', '\\')

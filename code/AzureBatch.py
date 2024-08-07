@@ -34,8 +34,8 @@ class AzureBatch:
     async def process_file(self,file):
         print(f"Processing file {file}")
         filename_only = Utils.get_file_name_only(file)
-        file_without_directory = Utils.strip_directory_name(file)
-        file_extension = Utils.get_file_extension(file_without_directory)
+        file_wo_directory = Utils.strip_directory_name(file)
+        file_extension = Utils.get_file_extension(file_wo_directory)
         #Mark start time
         processing_result = {}
         batch_storage_path = self.batch_path + file
@@ -45,18 +45,18 @@ class AzureBatch:
                                         self.input_directory_client, output_path)
             token_size = Utils.get_tokens_in_file(output_path,"gpt-4")
         else:
-            batch_file_data = self.input_storage_handler.get_file_data(file_without_directory,self.input_directory_client)
+            batch_file_data = self.input_storage_handler.get_file_data(file_wo_directory,self.input_directory_client)
             batch_file_string = str(batch_file_data)
             token_size = Utils.num_tokens_from_string(batch_file_string,"gpt-4")
-        output_directory_name = self.output_directory+"/"+Utils.append_postfix(file_without_directory)
-        error_directory_name = self.error_directory+"/"+Utils.append_postfix(file_without_directory)
+        output_directory_name = self.output_directory+"/"+Utils.append_postfix(filename_only)
+        error_directory_name = self.error_directory+"/"+Utils.append_postfix(filename_only)
         print(f"File {file} has {token_size} tokens")
         # Process the file
         upload_response = self.aoai_client.upload_batch_input_file(file,batch_storage_path)
         if not upload_response:
             print(f"An error occurred while uploading file {file}. Please check the file and try again. Code: {upload_response.status_code}")
-            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_without_directory)
-            cleanup_status = self.cleanup_batch(file_without_directory,"")
+            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,filename_only)
+            cleanup_status = self.cleanup_batch(file_wo_directory,"")
             return
         file_content_json = upload_response.json()
         file_id = file_content_json['id']
@@ -96,9 +96,9 @@ class AzureBatch:
             batch_metadata["error_file_name"] = error_filename
             error_file_content_json = json.dumps(error_file_content_string)
             error_file_metadata = json.dumps(batch_metadata)
-            error_content_write_result = self.error_storage_handler.write_content_to_directory(error_file_content_json,output_directory_name,error_filename)
-            error_metadata_write_result = self.error_storage_handler.write_content_to_directory(error_file_metadata,output_directory_name,metadata_filename)
-            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file)
+            error_content_write_result = self.error_storage_handler.write_content_to_directory(error_file_content_json,error_directory_name,error_filename)
+            error_metadata_write_result = self.error_storage_handler.write_content_to_directory(error_file_metadata,error_directory_name,metadata_filename)
+            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_wo_directory)
             if error_content_write_result and error_metadata_write_result:
                 print(f"An error file with details written to the 'error' directory.")
             else:
@@ -111,14 +111,15 @@ class AzureBatch:
             output_file_metadata = json.dumps(batch_metadata)
             output_content_write_result = self.processed_storage_handler.write_content_to_directory(output_file_content_json,output_directory_name,output_filename)
             output_metadata_write_result = self.processed_storage_handler.write_content_to_directory(output_file_metadata,output_directory_name,metadata_filename)
-            file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file_without_directory)
+            file_write_result = self.processed_storage_handler.write_content_to_directory(batch_file_data,output_directory_name,file_wo_directory)
             if output_content_write_result and output_metadata_write_result:
                 print(f"File: {file} has been processed successfully. Results are available in the 'processed' directory.")
             else:
                 print(f"File: {file} has been processed successfully but could not be written to storage. Please check {initial_batch_response.id} for more details.")   
-        cleanup_status = self.cleanup_batch(file_without_directory,file_id)
+        cleanup_status = self.cleanup_batch(file_wo_directory,file_id)
         processing_result["cleanup_status"] = cleanup_status
         return processing_result
+    
     def cleanup_batch(self,filename,file_id):
         cleanup_result = {}
         deletion_status = self.aoai_client.delete_single(file_id)
