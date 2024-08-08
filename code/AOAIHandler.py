@@ -24,19 +24,23 @@ class AOAIHandler:
         )
         return client
     def upload_batch_input_file(self,input_file_name, input_file_path):
-        url = f"{self.azure_endpoint}openai/files/import?api-version={self.api_version}"
-        headers = {
-        "Content-Type": "application/json",
-        "api-key": self.api_key  # Replace with your actual API key
-        }   
-        # Define the payload
-        payload = {
-            "purpose": "batch",
-            "filename": input_file_name,
-            "content_url": input_file_path
-        }
-    
-        return requests.request("POST", url, headers=headers, json=payload)
+        try:
+            url = f"{self.azure_endpoint}openai/files/import?api-version={self.api_version}"
+            headers = {
+            "Content-Type": "application/json",
+            "api-key": self.api_key  # Replace with your actual API key
+            }   
+            # Define the payload
+            payload = {
+                "purpose": "batch",
+                "filename": input_file_name,
+                "content_url": input_file_path
+            }
+        
+            return requests.request("POST", url, headers=headers, json=payload)
+        except Exception as e:
+            print(f"An exception occurred while uploading the file: {e}")
+            return False
     def delete_single(self, file_id):
         deletion_status = False
         try:
