@@ -14,7 +14,7 @@ def signal_handler(sig, frame):
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
-    APP_CONFIG = os.environ.get('APP_CONFIG', r"<path to config file>")
+    APP_CONFIG = os.environ.get('APP_CONFIG', r"<path to app config file>")
     utils = Utils()
     app_config_data = utils.read_json_data(APP_CONFIG)
     storage_config_data = utils.read_json_data(app_config_data["storage_config"])
@@ -48,7 +48,6 @@ def main():
         while True:
             if len(files) > 0:
                 asyncio.run(azure_batch.process_all_files(files, batch_size))
-                azure_batch.aoai_client.delete_all_files()
             else:
                 print("No files found. Sleeping for 60 seconds")
                 time.sleep(60) 
@@ -56,8 +55,6 @@ def main():
     else:
         print("Running in on-demand mode")
         asyncio.run(azure_batch.process_all_files(files, batch_size))   
-        #Cleanup
-        azure_batch.aoai_client.delete_all_files()
 
     #TODO: 1) Support blob storage
      

@@ -4,6 +4,7 @@ import os
 from token_count import TokenCount
 from  datetime import datetime
 class Utils:
+    #Add utility to count output tokens and estimate price.
     def __init__(self):
         pass
     @staticmethod
