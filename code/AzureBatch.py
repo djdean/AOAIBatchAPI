@@ -6,7 +6,8 @@ import time
 class AzureBatch:
     def __init__(self, aoai_client, input_storage_handler, 
                  error_storage_handler, processed_storage_handler, batch_path,
-                input_directory_client, local_download_path, output_directory, error_directory):
+                input_directory_client, local_download_path, output_directory, error_directory,
+                count_tokens=False):
         self.aoai_client = aoai_client
         self.input_storage_handler = input_storage_handler
         self.error_storage_handler = error_storage_handler
@@ -16,6 +17,7 @@ class AzureBatch:
         self.local_download_path = local_download_path
         self.output_directory = output_directory
         self.error_directory = error_directory
+        self.count_tokens = count_tokens
 
     async def process_all_files(self,files,micro_batch_size):
         tasks = []
@@ -46,14 +48,14 @@ class AzureBatch:
                 return
             self.process_batch_result(batch_data, filename_only, file_extension, file_wo_directory, 
                                   error_directory_name, output_directory_name)
-            cleanup_status = self.cleanup_batch(file_wo_directory,batch_data["file_id"])
+            cleanup_status = self.cleanup_batch(file_wo_directory,batch_data["file_id"], batch_data["output_file_id"], batch_data["error_file_id"])
             processing_result["cleanup_status"] = cleanup_status
         except Exception as e:
             #Unexpected exception during processing
             print(f"An error occurred while processing file: {file}. Error: {e}")
             if batch_data is not None:
                 file_write_result = self.error_storage_handler.write_content_to_directory(batch_data["batch_file_data"],error_directory_name,filename_only)
-                cleanup_status = self.cleanup_batch(file_wo_directory,batch_data["file_id"])
+                cleanup_status = self.cleanup_batch(file_wo_directory,batch_data["file_id"], batch_data["output_file_id"], batch_data["error_file_id"])
                 processing_result["cleanup_status"] = cleanup_status
         return processing_result
     
@@ -65,21 +67,26 @@ class AzureBatch:
                 output_path = os.path.join(self.local_download_path, file)
                 batch_file_data = self.input_storage_handler.save_file_to_local(file, 
                                             self.input_directory_client, output_path)
-                token_size = Utils.get_tokens_in_file(output_path,"gpt-4")
+                if self.count_tokens:
+                    token_size = Utils.get_tokens_in_file(output_path,"gpt-4")
             else:
                 batch_file_data = self.input_storage_handler.get_file_data(file_wo_directory,self.input_directory_client)
                 batch_file_string = str(batch_file_data)
-                token_size = Utils.num_tokens_from_string(batch_file_string,"gpt-4")
+                if self.count_tokens:
+                    token_size = Utils.num_tokens_from_string(batch_file_string,"gpt-4")
         except Exception as e:
             print(f"Could not download file: {file}. Error: {e}")
             return None
-        print(f"File {file} has {token_size} tokens")
+        if self.count_tokens:
+            print(f"File {file} has {token_size} tokens")
+        else:
+            token_size = "N/A"
          # Process the file
         upload_response = self.aoai_client.upload_batch_input_file(file,batch_storage_path)
         if not upload_response:
             print(f"An error occurred while uploading file {file}. Please check the file and try again. Code: {upload_response.status_code}")
-            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,filename_only)
-            cleanup_status = self.cleanup_batch(file_wo_directory,"")
+            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_wo_directory)
+            cleanup_status = self.cleanup_batch(file_wo_directory,None, None, None)
             return None
         file_content_json = upload_response.json()
         file_id = file_content_json['id']
@@ -91,7 +98,7 @@ class AzureBatch:
         except Exception as e:
             print(f"An error occurred while creating batch job for file: {file}. Error: {e}")
             file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,filename_only)
-            cleanup_status = self.cleanup_batch(file_wo_directory,"")
+            cleanup_status = self.cleanup_batch(file_wo_directory,None, None, None)
             return None
         #This takes start time as a param
         (finished_batch_response) = await self.aoai_client.wait_for_batch_job(initial_batch_response.id)
@@ -169,16 +176,17 @@ class AzureBatch:
         }
         return batch_metadata
     
-    def cleanup_batch(self,filename,file_id):
+    def cleanup_batch(self,filename,file_id, output_file_id, error_file_id):
         cleanup_result = {}
-        deletion_status = self.aoai_client.delete_single(file_id)
-        
-        if deletion_status:
-            print(f"File {filename} deleted successfully.")
-            cleanup_result["file_deletion"] = True
-        else:
-            print(f"An error occurred while deleting file {filename}.")
-            cleanup_result["file_deletion"] = False
+        if file_id is not None:
+            print("Deleting input file from client...")
+            deletion_status = self.aoai_client.delete_single(file_id)     
+        if output_file_id is not None:
+            print("Deleting output file from client...")
+            deletion_status = self.aoai_client.delete_single(output_file_id)
+        if error_file_id is not None:
+            print("Deleting error file from client...")
+            deletion_status = self.aoai_client.delete_single(error_file_id)
         if self.local_download_path is not None:
             local_filename_with_path = self.local_download_path+"\\"+filename
             if os.path.exists(local_filename_with_path):

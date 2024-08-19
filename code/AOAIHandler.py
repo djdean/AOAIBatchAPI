@@ -46,7 +46,7 @@ class AOAIHandler:
         try:
             # Attempt to delete the file
             response = self.aoai_client.files.delete(file_id)
-            print(f"File {file_id} deleted successfully.")
+            print(f"File {file_id} deleted from client successfully.")
             deletion_status = True
         except Exception as e:
             # Handle any exceptions that occur

@@ -14,7 +14,7 @@ def signal_handler(sig, frame):
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
-    APP_CONFIG = os.environ.get('APP_CONFIG', r"C:\Users\dade\Desktop\BatchAPI\config\app_config.json")
+    APP_CONFIG = os.environ.get('APP_CONFIG', r"<path to app config file>")
     utils = Utils()
     try:
         app_config_data = utils.read_json_data(APP_CONFIG)
@@ -30,6 +30,7 @@ def main():
         aoai_config_data = utils.read_json_data(app_config_data["AOAI_config"])
         BATCH_PATH = "https://"+storage_account_name+".blob.core.windows.net/"+input_filesystem_system_name+"/"
         batch_size = int(app_config_data["batch_size"])
+        count_tokens = int(app_config_data["count_tokens"])
         aoai_client = AOAIHandler(aoai_config_data)
         input_storage_handler = StorageHandler(storage_account_name, storage_account_key, input_filesystem_system_name)
         error_storage_handler = StorageHandler(storage_account_name, storage_account_key, error_filesystem_system_name)
@@ -43,7 +44,7 @@ def main():
         continuous_mode = app_config_data["continuous_mode"]
         azure_batch = AzureBatch(aoai_client, input_storage_handler, 
                                 error_storage_handler, processed_storage_handler, BATCH_PATH, input_directory_client, 
-                                local_download_path,output_directory, error_directory)
+                                local_download_path,output_directory, error_directory,count_tokens)
     except Exception as e:
         print(f"An error occurred while initializing the application, please check the configuration. \n\n\tException:\n\n\t\t{e}\n\n")
         return
