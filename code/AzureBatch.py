@@ -2,7 +2,7 @@ import os
 import json
 from Utilities import Utils
 import asyncio
-import time
+import aiohttp
 class AzureBatch:
     def __init__(self, aoai_client, input_storage_handler, 
                  error_storage_handler, processed_storage_handler, batch_path,
@@ -22,18 +22,19 @@ class AzureBatch:
     async def process_all_files(self,files,micro_batch_size):
         tasks = []
         current_tasks = 0
-        for file in files:
-            tasks.append(self.process_file(file))
-            current_tasks += 1
-            if current_tasks == micro_batch_size:
+        async with aiohttp.ClientSession() as session:
+            for file in files:
+                tasks.append(self.process_file(file, session))
+                current_tasks += 1
+                if current_tasks == micro_batch_size:
+                    await asyncio.gather(*tasks)
+                    tasks = []
+                    current_tasks = 0
+            #Process any remaining tasks
+            if len(tasks) > 0:
                 await asyncio.gather(*tasks)
-                tasks = []
-                current_tasks = 0
-        #Process any remaining tasks
-        if len(tasks) > 0:
-            await asyncio.gather(*tasks)
         
-    async def process_file(self,file):
+    async def process_file(self,file, session):
         print(f"Processing file {file}")
         filename_only = Utils.get_file_name_only(file)
         file_wo_directory = Utils.strip_directory_name(file)
@@ -42,8 +43,9 @@ class AzureBatch:
         error_directory_name = self.error_directory+"/"+Utils.append_postfix(filename_only)
         #Mark start time
         processing_result = {}
+        batch_data = None
         try:
-            batch_data = await self.submit_batch_job(file, file_wo_directory, error_directory_name, filename_only)
+            batch_data = await self.submit_batch_job(file, file_wo_directory, error_directory_name, filename_only, session)
             if batch_data is None:
                 return
             self.process_batch_result(batch_data, filename_only, file_extension, file_wo_directory, 
@@ -59,8 +61,7 @@ class AzureBatch:
                 processing_result["cleanup_status"] = cleanup_status
         return processing_result
     
-
-    async def submit_batch_job(self,file, file_wo_directory, error_directory_name, filename_only):
+    async def submit_batch_job(self,file, file_wo_directory, error_directory_name, filename_only, session):
         batch_storage_path = self.batch_path + file
         try:
             if self.local_download_path is not None:
@@ -82,13 +83,13 @@ class AzureBatch:
         else:
             token_size = "N/A"
          # Process the file
-        upload_response = self.aoai_client.upload_batch_input_file(file,batch_storage_path)
+        upload_response = await self.aoai_client.upload_batch_input_file_async(file,batch_storage_path, session)
         if not upload_response:
             print(f"An error occurred while uploading file {file}. Please check the file and try again. Code: {upload_response.status_code}")
             file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_wo_directory)
             cleanup_status = self.cleanup_batch(file_wo_directory,None, None, None)
             return None
-        file_content_json = upload_response.json()
+        file_content_json = upload_response
         file_id = file_content_json['id']
         print(f"file_id: {file_content_json['id']}")
         #TODO: Check if the file was uploaded successfully, if not, move to error folder and cleanup
@@ -141,7 +142,7 @@ class AzureBatch:
         if not error_file_content_string == "":
             error_filename = f"{filename_only}_error."+file_extension
             batch_data["error_file_name"] = error_filename
-            error_file_content_json = json.dumps(error_file_content_string)
+            error_file_content_json = error_file_content_string
             error_file_metadata = json.dumps(batch_metadata)
             error_content_write_result = self.error_storage_handler.write_content_to_directory(error_file_content_json,error_directory_name,error_filename)
             error_metadata_write_result = self.error_storage_handler.write_content_to_directory(error_file_metadata,error_directory_name,metadata_filename)

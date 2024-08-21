@@ -1,7 +1,7 @@
 
 from openai import AzureOpenAI
 import requests
-import time
+import aiohttp
 import datetime
 import asyncio
 
@@ -23,6 +23,24 @@ class AOAIHandler:
             api_version=config['aoai_api_version']
         )
         return client
+    async def upload_batch_input_file_async(self,input_file_name, input_file_path, session):
+        try:
+            url = f"{self.azure_endpoint}openai/files/import?api-version={self.api_version}"
+            headers = {
+            "Content-Type": "application/json",
+            "api-key": self.api_key  # Replace with your actual API key
+            }   
+            # Define the payload
+            payload = {
+                "purpose": "batch",
+                "filename": input_file_name,
+                "content_url": input_file_path
+            }
+            async with session.post(url, headers=headers, json=payload) as response:
+                return await response.json()
+        except Exception as e:
+            print(f"An exception occurred while uploading the file: {e}")
+            return False
     def upload_batch_input_file(self,input_file_name, input_file_path):
         try:
             url = f"{self.azure_endpoint}openai/files/import?api-version={self.api_version}"
