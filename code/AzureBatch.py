@@ -98,7 +98,7 @@ class AzureBatch:
             initial_batch_response = self.aoai_client.create_batch_job(file_id)
         except Exception as e:
             print(f"An error occurred while creating batch job for file: {file}. Error: {e}")
-            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,filename_only)
+            file_write_result = self.error_storage_handler.write_content_to_directory(batch_file_data,error_directory_name,file_wo_directory)
             cleanup_status = self.cleanup_batch(file_wo_directory,None, None, None)
             return None
         #This takes start time as a param
